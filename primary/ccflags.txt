@@ -1,0 +1,49 @@
+Elapsed: 00:00:00.01
+SQL> desc user_plsql_object_settings
+ Name                                      Null?    Type
+ ----------------------------------------- -------- ----------------------------
+ NAME                                      NOT NULL VARCHAR2(30)
+ TYPE                                               VARCHAR2(12)
+ PLSQL_OPTIMIZE_LEVEL   
+
+
+
+
+
+column PLSQL_CODE_TYPE       format a20  
+column PLSQL_DEBUG           format a20     
+column PLSQL_WARNINGS        format a20        
+column NLS_LENGTH_SEMANTICS  format a20 
+column PLSQL_CCFLAGS         format a20
+
+<<anon_block_alpha>>
+declare
+    i integer :=0;
+begin
+    $IF dbms_db_version.ver_le_10 $THEN dbms_output.put_line('10'); i:=i+1; $ELSE dbms_output.put_line('??'); i:=i+1; $END
+    dbms_output.put_line('hello');
+    dbms_output.put_line(nvl($$plsql_unit,'~'));
+    dbms_output.put_line($$plsql_line);
+    dbms_output.put_line('bye');
+end anon;
+/
+
+
+create or replace procedure xfoo
+as
+  i integer :=1;
+begin
+    $IF dbms_db_version.ver_le_10 $THEN dbms_output.put_line('10'); i:=i+1; $ELSE dbms_output.put_line('??'); i:=i+1; $END
+    dbms_output.put_line('hello');
+    dbms_output.put_line(nvl($$plsql_unit,'~'));
+    dbms_output.put_line($$plsql_line);
+    dbms_output.put_line('bye');
+end xfoo;
+/
+show errors
+
+begin
+    xfoo;
+end;
+/
+

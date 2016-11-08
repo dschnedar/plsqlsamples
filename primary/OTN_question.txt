@@ -1,0 +1,78 @@
+SQL*Plus Error?:
+It appears that the parser does not like "--" at then end of the first line of the query.
+I see this error "ORA-00936: missing expression" or "ORA-00933: SQL command not properly ended"
+SQL*Plus does not number the 2nd line when I do this.
+If a space follows the --, "-- ", I still get the error.
+a single "-" at the end of the line is ignored, and the query works
+But, "--." will not get the error.
+I believe that I have had this problem before inside the middle of a PL/SQL package procedure.
+--
+This is obviously easy to avoid.  Is this just a quirk or am I missing something?
+-----
+SQL*Plus: Release 9.0.1.4.0
+Oracle Database 10g Enterprise Edition Release 10.2.0.3.0
+
+
+{code}
+----------------------------------------------
+-- These provoke an error
+----------------------------------------------
+SQL select 'a' --
+ from dual;
+select 'a' - from dual
+             *
+ERROR at line 1:
+ORA-00936: missing expression
+
+/* the -- is "-- " */
+SQL select 'a','b','c' --
+ from dual;
+select 'a','b','c' - from dual
+                     *
+ERROR at line 1:
+ORA-00936: missing expression
+
+SQL select --
+ select 'a' from dual --
+ ;
+select - select 'a' from dual -
+         *
+ERROR at line 1:
+ORA-00936: missing expression
+
+
+SQL select 'a' from dual --
+ ;
+select 'a' from dual -
+                     *
+ERROR at line 1:
+ORA-00933: SQL command not properly ended
+----------------------------------------------
+-- These are OK 
+----------------------------------------------
+SQL select 'a' --.
+  2  from dual;
+
+'
+-
+a
+Elapsed: 00:00:00.00
+SQL select
+  2  'a' --
+  3  from dual;
+
+'
+-
+a
+
+------- a single "-" at the end of the line is ignored, query works
+SQL select 'a' from dual -
+ ;
+
+'
+-
+a
+
+
+SQL
+{code}

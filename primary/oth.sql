@@ -1,0 +1,554 @@
+CREATE OR REPLACE PACKAGE oth
+AS 
+    BLACK      CONSTANT INTEGER := 1;
+    WHITE      CONSTANT INTEGER := 2;
+    GREEN      CONSTANT INTEGER := 3; 
+    --
+    A CONSTANT INTEGER := 1;
+    B CONSTANT INTEGER := 2;
+    C CONSTANT INTEGER := 3;
+    D CONSTANT INTEGER := 4;
+    E CONSTANT INTEGER := 5;
+    F CONSTANT INTEGER := 6;
+    G CONSTANT INTEGER := 7;
+    H CONSTANT INTEGER := 8;
+    --
+    TYPE location  IS record ( lattitude INTEGER , longitude INTEGER );
+    TYPE direction IS record ( down      INTEGER , across    INTEGER );
+    --------------------------------------------------------------------
+    --  FUNCTIONS AND PROCEDURES
+    --------------------------------------------------------------------
+    FUNCTION  valid_move( loc location  , color INTEGER , commit_move BOOLEAN := TRUE )  RETURN BOOLEAN;
+    FUNCTION  get_total(  color INTEGER )                 RETURN INTEGER;
+    PROCEDURE init_board;
+    PROCEDURE test;
+    PROCEDURE dbg_on;
+    PROCEDURE dbg_off;
+    -------------------------
+    PROCEDURE show_board;
+    PROCEDURE move( p_row INTEGER , p_col INTEGER , p_color INTEGER := WHITE );
+END oth;
+/
+show errors
+
+
+
+CREATE OR REPLACE PACKAGE BODY oth
+AS    
+    dbg BOOLEAN := FALSE;
+    --
+    TYPE           all_directions_type     IS     VARRAY(8) of direction;
+    all_directions all_directions_type := all_directions_type();
+    ----------------------------------------------------------------
+    NORTH     direction;
+    SOUTH     direction;
+    WEST      direction;
+    EAST      direction;
+    NORTHWEST direction;
+    NORTHEAST direction;
+    SOUTHWEST direction;
+    SOUTHEAST direction;
+    --
+    BOARD_SIZE CONSTANT INTEGER := 8;
+    --
+    TYPE row_TYPE IS VARRAY(8) of INTEGER;
+    DEFAULT_ROW row_TYPE := row_TYPE(GREEN,GREEN,GREEN,GREEN,GREEN,GREEN,GREEN,GREEN);
+    --
+    TYPE board_type IS VARRAY(8) of row_TYPE;    
+    board board_type := board_type(DEFAULT_ROW,DEFAULT_ROW,DEFAULT_ROW,DEFAULT_ROW,DEFAULT_ROW,DEFAULT_ROW,DEFAULT_ROW,DEFAULT_ROW); 
+    --
+    tmp_loc location;
+    ------------------------------------------------------------------------------------------------
+    ------------------------------------------------------------------------------------------------
+    ------------------------------------------------------------------------------------------------
+    ------------------------------------------------------------------------------------------------    
+    PROCEDURE p(     str VARCHAR2) IS BEGIN    dbms_output.put(             str );     END p       ;
+    PROCEDURE pl(    str VARCHAR2) IS BEGIN    dbms_output.put_line( '>' || str );     END pl      ;
+    PROCEDURE dbg_on               IS BEGIN    dbg := TRUE;                            END dbg_on  ;
+    PROCEDURE dbg_off              IS BEGIN    dbg := FALSE;                           END dbg_off ; 
+    PROCEDURE dbg_p( str VARCHAR2) IS BEGIN    IF  dbg   THEN   p( str);  END IF;      END dbg_p   ;
+    PROCEDURE dbg_pl(str VARCHAR2) IS BEGIN    IF  dbg   THEN   pl(str);  END IF;      END dbg_pl  ;
+    --
+    
+    FUNCTION  get_total(  color INTEGER )     RETURN INTEGER
+    IS
+        return_val INTEGER := 0;
+    BEGIN
+        FOR i IN 1..BOARD_SIZE LOOP
+            FOR j IN 1..BOARD_SIZE LOOP
+                IF board(i)(j) = color THEN return_val := return_val + 1; END IF;
+            END LOOP; 
+        END LOOP;         
+        RETURN return_val;
+    END get_total;
+    --
+    FUNCTION to_alpha( i INTEGER ) RETURN VARCHAR2
+    IS
+    BEGIN
+        RETURN chr(i+ascii('A')-1);  -- (1,2,3,4,5,6,7,8) to (A,B,C,D,E,F,G,H)
+    END to_alpha;
+    --
+    FUNCTION next( current location , d direction )
+    RETURN location
+    IS
+        ret_val location;
+    BEGIN
+        ret_val.lattitude := current.lattitude + d.down  ;
+        ret_val.longitude := current.longitude + d.across;
+        RETURN ret_val;
+    END next ;
+    --
+    FUNCTION is_null( loc location )
+    RETURN BOOLEAN
+    IS
+    BEGIN
+        IF loc.lattitude BETWEEN 1 AND BOARD_SIZE AND 
+           loc.longitude BETWEEN 1 AND BOARD_SIZE 
+        THEN
+            RETURN false;
+        ELSE
+            RETURN true;
+        END IF;
+    END is_null ;
+    --
+    PROCEDURE set_color( loc location, color INTEGER ) 
+    IS 
+    BEGIN
+        IF NOT is_null(loc) THEN
+            board(loc.lattitude)(loc.longitude) := color;
+        END IF; 
+    END set_color;
+    --
+    FUNCTION  get_color( loc location) RETURN INTEGER
+    IS 
+    BEGIN
+        IF NOT is_null(loc) THEN
+            RETURN board(loc.lattitude)(loc.longitude);
+        ELSE
+            RETURN NULL;
+        END IF; 
+    END get_color;
+    --
+    PROCEDURE init_board
+    IS
+    BEGIN
+        FOR i IN 1..8 LOOP
+           FOR j IN 1..8 LOOP
+               board(i)(j) := GREEN;
+           END LOOP;
+        END LOOP;
+        board(4)(D) := WHITE;
+        board(4)(E) := BLACK;
+        board(5)(D) := BLACK;
+        board(5)(E) := WHITE;        
+    END init_board;
+    --
+    PROCEDURE init_directions
+    IS
+    BEGIN
+        NORTH.down     := -1;    NORTH.across     :=  0;
+        SOUTH.down     :=  1;    SOUTH.across     :=  0;
+        EAST.down      :=  0;    EAST.across      :=  1;
+        WEST.down      :=  0;    WEST.across      := -1;
+        NORTHWEST.down := -1;    NORTHWEST.across := -1;
+        NORTHEAST.down := -1;    NORTHEAST.across :=  1;
+        SOUTHWEST.down :=  1;    SOUTHWEST.across := -1;
+        SOUTHEAST.down :=  1;    SOUTHEAST.across :=  1;
+        --
+        all_directions.EXTEND(8);
+        all_directions(1) := NORTH;
+        all_directions(2) := SOUTH;
+        all_directions(3) := EAST;
+        all_directions(4) := WEST;
+        all_directions(5) := NORTHWEST;
+        all_directions(6) := NORTHEAST;
+        all_directions(7) := SOUTHWEST;
+        all_directions(8) := SOUTHEAST;
+    END init_directions;
+    --
+    FUNCTION to_str(dir direction) RETURN VARCHAR2
+    IS
+    BEGIN
+        CASE
+            WHEN dir.down = -1 AND dir.across =  0 THEN RETURN 'NORTH';
+            WHEN dir.down =  1 AND dir.across =  0 THEN RETURN 'SOUTH';
+            WHEN dir.down =  0 AND dir.across =  1 THEN RETURN 'EAST';
+            WHEN dir.down =  0 AND dir.across = -1 THEN RETURN 'WEST';
+            WHEN dir.down = -1 AND dir.across = -1 THEN RETURN 'NORTHWEST';
+            WHEN dir.down = -1 AND dir.across =  1 THEN RETURN 'NORTHEAST';
+            WHEN dir.down =  1 AND dir.across = -1 THEN RETURN 'SOUTHWEST';
+            WHEN dir.down =  1 AND dir.across =  1 THEN RETURN 'SOUTHEAST';
+        END CASE;
+    END;
+    --
+    FUNCTION to_str(loc location) RETURN VARCHAR2
+    IS
+    BEGIN
+        RETURN '{'||to_char(loc.lattitude)||','|| to_alpha(to_char(loc.longitude)) ||'}';
+    END;
+    --
+    FUNCTION to_1_char(i INTEGER) RETURN char
+    IS
+    BEGIN
+        CASE i
+        WHEN WHITE  THEN RETURN 'w';
+        WHEN BLACK  THEN RETURN 'B';
+        WHEN GREEN  THEN RETURN ' ';
+        ELSE             RETURN '?';
+        END CASE;
+    END to_1_char;
+    --
+    PROCEDURE show_board
+    IS
+    BEGIN
+        pl('ABCDEFGH');
+        FOR row IN 1..BOARD_SIZE LOOP
+            p(trim(to_char(row)));
+            FOR col IN 1..BOARD_SIZE LOOP
+                p( to_1_char(board(row)(col)) );
+            END LOOP;
+            p(chr(10));
+        END LOOP;
+        pl('');
+        pl('White Score = ' || to_char( get_total(WHITE),'90') );
+        pl('Black Score = ' || to_char( get_total(BLACK),'90') );
+        pl('');
+    END show_board;
+    --
+    PROCEDURE show_cell( loc location )
+    IS
+    BEGIN
+        p('>');
+        p(     '(' ||loc.lattitude ||','|| to_alpha(loc.longitude)     ||')'
+                                   ||'['|| to_1_char(get_color(loc))   ||']'  );
+        pl('');
+        null;
+    END show_cell;
+    --
+    FUNCTION distance( loc_a location , loc_b location)
+    RETURN INTEGER
+    IS        
+    BEGIN 
+        IF is_null(loc_a) or is_null(loc_b) THEN 
+            RETURN null;
+        ELSE
+            RETURN greatest(  abs( loc_a.lattitude - loc_b.lattitude )
+                           ,  abs( loc_a.longitude - loc_b.longitude )
+                           )
+            ;
+        END IF;
+    END distance;
+    --
+    FUNCTION is_opposing( color_a INTEGER , color_b INTEGER ) RETURN BOOLEAN
+    IS
+    BEGIN
+        IF color_a IS null or color_b IS null THEN
+            dbms_output.put_line('A or B IS a null color');
+            RETURN false;
+        ELSIF (  color_a = WHITE AND  color_b = BLACK )
+              or
+              (  color_a = BLACK AND  color_b = WHITE )
+        THEN
+            RETURN true;
+        ELSE
+            RETURN false;
+        END IF;
+    END is_opposing;
+    --
+    FUNCTION  valid_move( loc location  , color INTEGER , commit_move BOOLEAN := TRUE )  RETURN BOOLEAN
+    IS
+        ret_val   BOOLEAN := null;
+        tmp_loc   location;
+        next_cell location;
+        TYPE flips_type IS table of location index by pls_INTEGER;
+        possible_flips  flips_type;
+        definite_flips  flips_type;
+    BEGIN
+        --
+        dbg_pl( 'move('||loc.lattitude||','||loc.longitude||')'||to_1_char(color) );
+        IF color IS null or color not IN (BLACK,WHITE) THEN
+            --dbg_pl('---bad color---');
+            RETURN false;
+        END IF;
+        IF is_null(loc) THEN
+            ret_val :=  false;
+            --dbg_pl('valid_move?  NO, off board');
+        ELSIF get_color(loc) IN (WHITE,BLACK) THEN
+            ret_val := false;
+            --dbg_pl('valid_move?  NO, already occupied');
+        ELSE
+            dbg_pl('---look FOR opposing neighbor---');
+            FOR i IN all_directions.first..all_directions.last LOOP
+                tmp_loc := next( loc,all_directions(i) );
+                --------------------------------------------------------------------
+                IF not is_null(tmp_loc) THEN
+                    dbg_pl(  to_str(loc)||'"'||to_1_char(color)||'":' ||to_str(all_directions(i))||':'||to_str(tmp_loc)||to_1_char(get_color(tmp_loc))    );
+                ELSE
+                    dbg_pl( to_str(loc)||'## hit edge ##' || to_str(tmp_loc) );
+                END IF;
+                --------------------------------------------------------------------
+                IF not is_null(tmp_loc) 
+                   AND 
+                   is_opposing(  color ,  get_color(tmp_loc) ) 
+                THEN
+                    dbg_pl('valid_move?  MAYBE has opposing neighbor');
+                    ----------------------------------------------------------------------
+                    ----------------------------------------------------------------
+                    -- keep looking FOR start-color/end-color match 
+                    --    until 1. find match
+                    --          2. find empty space
+                    --          3. find edge
+                    ----------------------------------------------------------------
+                    possible_flips.delete;
+                    next_cell := next(tmp_loc,all_directions(i));
+                    possible_flips(possible_flips.count+1) := tmp_loc;
+                    dbg_pl(  'next_cell=' ||to_str(next_cell)  ||'.'|| to_1_char(get_color(next_cell))||'.'  );
+                    IF (not is_null(next_cell) ) AND get_color(next_cell) <> GREEN THEN
+                        possible_flips(possible_flips.count+1) := loc;
+                        LOOP
+                            possible_flips(possible_flips.count+1) := next_cell;
+                            IF color = get_color(next_cell) THEN
+                                ret_val   := true;
+                                dbg_pl('++++++ can flip a line ++++++');
+                                FOR i IN possible_flips.first..possible_flips.last LOOP
+                                    definite_flips(definite_flips.count+1) := possible_flips(i);
+                                END LOOP;
+                                exit;
+                            END IF;
+                            next_cell := next(next_cell,all_directions(i));   
+                            IF is_null(next_cell)  THEN 
+                                exit;                     -- reached edge
+                            ELSIF get_color(next_cell)=GREEN THEN
+                                exit;                     -- reached blank cell
+                            END IF;                         
+                        END LOOP;
+                    END IF;
+                    ----------------------------------------------------------------------
+                END IF;
+            END LOOP;
+        END IF;
+        --
+        IF commit_move THEN
+            FOR i IN nvl(definite_flips.first,9999)..definite_flips.count LOOP
+                set_color(definite_flips(i),color);
+            END LOOP;
+        END IF;
+        RETURN ret_val;
+        --
+    END valid_move;
+    --
+    FUNCTION valid_move( row INTEGER , col INTEGER , color INTEGER , commit_move BOOLEAN := TRUE  )
+    RETURN BOOLEAN
+    IS
+        loc LOCATION;
+    BEGIN
+        loc.lattitude := row;
+        loc.longitude := col;
+        RETURN valid_move( loc , color  );
+    END valid_move ;
+    --
+    PROCEDURE test IS
+        tmp_bool BOOLEAN;
+    BEGIN
+        show_board;
+        pl('--------------------- TEST 4 -----------------------------------------');
+        pl('--------------------- TEST 4 -----------------------------------------');
+        pl('--------------------- TEST 4 -----------------------------------------');
+        pl('--------------------- TEST 4 -----------------------------------------');
+        FOR i IN 1..8 LOOP
+            FOR j IN 1..8 LOOP
+                 board(i)(j) := WHITE;
+            END LOOP;
+        END LOOP;
+        board(1)(A) := BLACK;
+        board(1)(H) := GREEN;
+        board(8)(A) := BLACK;
+        board(8)(H) := BLACK;
+        show_board;
+        tmp_loc.lattitude := 1;
+        tmp_loc.longitude := h;
+        IF valid_move(tmp_loc,BLACK) THEN
+            pl(to_str(tmp_loc) ||'--------'||'test4 valid move');
+        ELSE
+            pl(to_str(tmp_loc) ||'--------'||'test4 NOT valid move');
+        END IF;
+        show_board;
+        tmp_loc.lattitude := 7;
+        tmp_loc.longitude := 2;
+        IF valid_move(tmp_loc,BLACK) THEN
+            pl(to_str(tmp_loc) ||'--------'||'test4 valid move');
+        ELSE
+            pl(to_str(tmp_loc) ||'--------'||'test4 NOT valid move');
+        END IF;
+        show_board;
+        
+        
+        pl('--------------------- TEST 5 -----------------------------------------');
+        pl('--------------------- TEST 5 -----------------------------------------');
+        pl('--------------------- TEST 5 -----------------------------------------');
+        pl('--------------------- TEST 5 -----------------------------------------');
+        init_board;
+        show_board;
+        tmp_bool := valid_move(4,F,WHITE);
+        show_board;
+        tmp_bool := valid_move(5,F,BLACK);
+        show_board;
+        tmp_bool := valid_move(6,E,WHITE);
+        show_board;
+        tmp_bool := valid_move(3,F,BLACK);
+        show_board;
+        tmp_bool := valid_move(3,E,WHITE);
+        show_board;
+        tmp_bool := valid_move(3,D,BLACK);
+        show_board;
+        tmp_bool := valid_move(2,E,WHITE);
+        show_board;
+        tmp_bool := valid_move(1,D,BLACK);
+        show_board;
+        tmp_bool := valid_move(4,C,WHITE);
+        show_board;
+        tmp_bool := valid_move(6,D,BLACK);
+        show_board;
+        tmp_bool := valid_move(4,G,WHITE);
+        show_board;
+        tmp_bool := valid_move(6,F,BLACK);
+        show_board;
+        tmp_bool := valid_move(7,E,WHITE);
+        show_board;
+        tmp_bool := valid_move(2,D,BLACK);
+        show_board;
+        tmp_bool := valid_move(1,E,WHITE);
+        show_board;
+        tmp_bool := valid_move(8,F,BLACK);
+        show_board;
+        tmp_bool := valid_move(3,C,WHITE);
+        show_board;
+        tmp_bool := valid_move(4,B,BLACK);
+        show_board;
+        tmp_bool := valid_move(5,A,WHITE);
+        show_board;
+        tmp_bool := valid_move(4,A,BLACK);
+        show_board;
+        tmp_bool := valid_move(3,A,WHITE);
+        show_board;
+        tmp_bool := valid_move(1,F,BLACK);
+        show_board;
+        tmp_bool := valid_move(5,C,WHITE);
+        show_board;
+        tmp_bool := valid_move(5,B,BLACK);
+        show_board;
+        tmp_bool := valid_move(5,G,WHITE);
+        show_board;
+        tmp_bool := valid_move(3,B,BLACK);
+        show_board;
+        tmp_bool := valid_move(2,C,WHITE);
+        show_board;
+        tmp_bool := valid_move(6,A,BLACK);
+        show_board;
+        tmp_bool := valid_move(7,1,WHITE);
+        show_board;
+        tmp_bool := valid_move(2,B,BLACK);
+        show_board;
+        tmp_bool := valid_move(2,A,WHITE);
+        show_board;
+        tmp_bool := valid_move(4,H,BLACK);
+        show_board;
+        tmp_bool := valid_move(6,H,WHITE);
+        show_board;
+        tmp_bool := valid_move(3,G,BLACK);
+        show_board;
+        tmp_bool := valid_move(7,F,WHITE);
+        show_board;
+        tmp_bool := valid_move(2,F,BLACK);
+        show_board;
+        tmp_bool := valid_move(2,G,WHITE);
+        show_board;
+        tmp_bool := valid_move(1,C,BLACK);
+        show_board;
+        tmp_bool := valid_move(6,D,WHITE);
+        show_board;
+        tmp_bool := valid_move(6,B,BLACK);
+        show_board;
+        tmp_bool := valid_move(6,C,WHITE);
+        show_board;
+        tmp_bool := valid_move(6,G,BLACK);
+        show_board;
+        tmp_bool := valid_move(8,E,WHITE);
+        show_board;
+        tmp_bool := valid_move(1,G,BLACK);
+        show_board;
+        tmp_bool := valid_move(1,H,WHITE);
+        show_board;
+        tmp_bool := valid_move(8,D,BLACK);
+        show_board;
+        tmp_bool := valid_move(1,B,WHITE);
+        show_board;
+        tmp_bool := valid_move(1,A,BLACK);
+        show_board;
+        tmp_bool := valid_move(3,H,WHITE);
+        show_board;
+        tmp_bool := valid_move(2,H,BLACK);
+        show_board;
+        tmp_bool := valid_move(5,H,WHITE);
+        show_board;
+        tmp_bool := valid_move(7,B,BLACK);
+        show_board;
+        tmp_bool := valid_move(7,D,WHITE);
+        show_board;
+        tmp_bool := valid_move(8,A,BLACK);
+        show_board;
+        tmp_bool := valid_move(8,B,WHITE);
+        show_board;
+        tmp_bool := valid_move(8,C,BLACK);
+        show_board;
+        tmp_bool := valid_move(7,C,BLACK);
+        show_board;
+        tmp_bool := valid_move(8,G,BLACK);
+        show_board;
+        tmp_bool := valid_move(7,G,WHITE);
+        show_board;
+        tmp_bool := valid_move(7,H,BLACK);
+        show_board;
+        tmp_bool := valid_move(8,H,WHITE);
+        show_board;
+        
+        
+        
+        
+        
+        
+    END test;
+    
+    PROCEDURE move( p_row INTEGER , p_col INTEGER , p_color INTEGER := WHITE )
+    IS
+        color INTEGER := p_color;
+    BEGIN
+        NULL;
+        IF color IS NULL OR color NOT IN (BLACK,WHITE,GREEN) THEN
+            color := WHITE;
+        END IF;
+        IF color = GREEN THEN
+            board(p_row)(p_col) := GREEN;  -- Like an eraser
+            show_board;
+        ELSE
+            IF valid_move(p_row,p_col,color,TRUE) THEN
+                show_board;
+                CASE color
+                  WHEN WHITE THEN pl('Black''s move:');
+                  WHEN BLACK THEN pl('White''s move:');
+                             ELSE pl('?????''s move:');
+                END CASE;
+            ELSE
+                pl('Not a valid move; try again.');
+            END IF;
+        END IF;
+    END ;
+    --
+BEGIN --oth
+    init_board;
+    init_directions;
+END oth;
+/
+show errors
+
+--exec oth.test

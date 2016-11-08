@@ -1,0 +1,43 @@
+Selection directives 
+   Use the $IF directive to evaluate expressions and 
+   determine which code should be included or avoided. 
+
+    $IF , $THEN , $ELSE , $END
+
+Inquiry directives 
+   Use the $$identifier syntax to refer to conditional 
+   compilation flags. These inquiry directives can be 
+   referenced within an $IF directive or used 
+   independently in your code. 
+
+    $$PLSQL_DEBUG 
+    $$PLSQL_OPTIMIZE_LEVEL 
+    $$PLSQL_CODE_TYPE 
+    $$PLSQL_WARNINGS 
+    $$NLS_LENGTH_SEMANTICS
+    $$PLSQL_UNIT 
+    $$PLSQL_LINE 
+    $$DBMS_DB_VERSION.VERSION     $$DBMS_DB_VERSION.RELEASE 
+    $$DBMS_DB_VERSION.VER_LE_9    $$DBMS_DB_VERSION.VER_LE_9_1
+    $$DBMS_DB_VERSION.VER_LE_10   $$DBMS_DB_VERSION.VER_LE_10_1  $$DBMS_DB_VERSION.VER_LE_10_2
+    $$DBMS_DB_VERSION.VER_LE_11   $$DBMS_DB_VERSION.VER_LE_11_1  $$DBMS_DB_VERSION.VER_LE_11_2
+
+    $$MY_DBG_ON
+
+
+Error directives 
+   Use the $ERROR directive to report compilation errors
+   based on conditions evaluated when the 
+   preprocessor prepares your code for compilation. 
+
+
+
+
+PLSQL_CCFLAGS 
+   varchar2,boolean,number
+
+
+   ALTER SESSION SET PLSQL_CCFLAGS = 'mybool:TRUE, v:NULL myPlsInt:10'; 
+
+
+    

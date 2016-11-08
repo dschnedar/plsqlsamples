@@ -1,0 +1,79 @@
+ALTER SESSION SET PLSQL_CCFLAGS = 'max_sentence:100';
+ALTER SYSTEM  SET PLSQL_CCFLAGS = 'VARCHAR2_SIZE:100, DEF_APP_ERR:-20001';
+
+
+$$PLSQL_UNIT
+$$PLSQL_LINE
+
+
+$IF $$asserting 
+ OR CC_assertion.asserting
+$THEN
+   IF p_param != c_pi*r*r THEN
+      raise_application_error(..
+   END IF;
+$END
+
+
+
+$IF $$PLSQL_OPTIMIZE_LEVEL != 2 
+$THEN
+   $ERROR 'intensive_program must be compiled with maximum optimisation'
+   $END
+$END  
+
+
+
+RELEASE
+VERSION
+VER_LE_9
+VER_LE_9_1
+VER_LE_9_2
+VER_LE_10
+VER_LE_10_1
+VER_LE_10_2
+VER_LE_11
+VER_LE_11_1
+
+$$PLSQL_OPTIMIZE_LEVEL
+
+
+PLSQL_CCFLAGS, PLSQL_CODE_TYPE, PLSQL_DEBUG, PLSQL_NATIVE_LIBRARY_DIR, PLSQL_NATIVE_LIBRARY_SUBDIR_COUNT, PLSQL_OPTIMIZE_LEVEL, PLSQL_WARNINGS, and NLS_LENGTH_SEMANTICS
+
+
+The values at the time of compilation of the PLSQL_CCFLAGS, PLSQL_CODE_TYPE, PLSQL_DEBUG, PLSQL_OPTIMIZE_LEVEL, PLSQL_WARNINGS, and NLS_LENGTH_SEMANTICS initialization parameters are stored with the unit's metadata. You can view information about the settings of these parameters with the ALL_PLSQL_OBJECT_SETTINGS view. For information, see Oracle Database Reference.
+
+
+
+ select * from ALL_PLSQL_OBJECT_SETTINGS
+
+
+PLSQL_LINE, PLSQL_UNIT, PLSQL_CCFLAGS, PLSQL_CODE_TYPE, PLSQL_DEBUG, PLSQL_NATIVE_LIBRARY_DIR, PLSQL_NATIVE_LIBRARY_SUBDIR_COUNT, PLSQL_OPTIMIZE_LEVEL, PLSQL_WARNINGS, and NLS_LENGTH_SEMANTICS
+
+
+The Oracle Database 10g Release 2 provides the following PL/SQL compiler parameters that can be used in conditional inquiry directives:
+
+
+ PLSQL_CCFLAGS. 
+
+ PLSQL_DEBUG 
+
+ PLSQL_OPTIMIZE_LEVEL 
+
+ PLSQL_CODE_TYPE 
+
+ PLSQL_WARNINGS 
+
+ NLS_LENGTH_SEMANTICS 
+
+12:26:08 SQL> desc user_plsql_object_settings
+ Name                                      Null?    Type
+ ----------------------------------------- -------- ----------------------------
+ NAME                                      NOT NULL VARCHAR2(30)
+ TYPE                                               VARCHAR2(12)
+ PLSQL_OPTIMIZE_LEVEL                               NUMBER
+ PLSQL_CODE_TYPE                                    VARCHAR2(4000)
+ PLSQL_DEBUG                                        VARCHAR2(4000)
+ PLSQL_WARNINGS                                     VARCHAR2(4000)
+ NLS_LENGTH_SEMANTICS                               VARCHAR2(4000)
+ PLSQL_CCFLAGS                                      VARCHAR2(4000)

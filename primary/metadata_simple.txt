@@ -1,0 +1,19 @@
+spool md
+set long 200000 
+set pages 0 
+set lines 131
+column meta format a121 word_wrapped
+
+select dbms_metadata.get_ddl('USER','BEP\SCHNEDARD') meta from dual;
+
+
+select dbms_metadata.get_granted_ddl('OBJECT_GRANT' , 'BEP\SCHNEDARD') meta from dual;
+select dbms_metadata.get_granted_ddl('ROLE_GRANT'   , 'BEP\SCHNEDARD') meta from dual;
+select dbms_metadata.get_granted_ddl('SYSTEM_GRANT' , 'BEP\SCHNEDARD') meta from dual;
+spool
+spool off
+
+
+
+
+
