@@ -1,4 +1,15 @@
 -----------------------------------------------------------------------
+-- This was a learning experiment for me.
+-- I started with an example.
+-- Possibly PL/SQL User's Guide and Reference 9.2
+-- I don't know how much has been changed.
+-- I do return NULLs on stack errors instead of raising an error.
+-----------------------------------------------------------------------
+-----------------------------------------------------------------------
+-----------------------------------------------------------------------
+-----------------------------------------------------------------------
+-----------------------------------------------------------------------
+-----------------------------------------------------------------------
 -- Simple example of PL/SQL's new object oriented language features
 -----------------------------------------------------------------------
 -- A stack is like a stack of dishes or stack of cards where you can
